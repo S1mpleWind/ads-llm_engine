@@ -65,6 +65,8 @@ def qwen3_5_attention_forward(
     hidden_states: torch.Tensor,
     position_embeddings: tuple[torch.Tensor, torch.Tensor],
     attention_mask: torch.Tensor | None,
+    past_key_values=None, # Qwen3_5DynamicCache 对象，由 qwen3_5_text_forward 传入，利用它更新缓存；实现KV Cache中需用到此参数
+    layer_idx: int = 0, # 当前层在模型中的索引，用于定位该层的缓存槽位；实现KV Cache中需用到此参数
 ) -> tuple[torch.Tensor, torch.Tensor | None]:
     input_shape = hidden_states.shape[:-1]
     hidden_shape = (*input_shape, -1, attn_module.head_dim)
@@ -80,6 +82,13 @@ def qwen3_5_attention_forward(
 
     cos, sin = position_embeddings
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+    # ===== TODO: KV Cache - Full Attention 缓存更新 (START) =====
+    # 将本步产生的 K、V 追加到缓存，取回包含所有历史 token 的完整 K/V，
+    # 之后的 attention 计算基于这个完整序列（而非仅本步的 K/V）。
+    # 缓存不存在时（no-cache 模式），直接使用本步 K/V 即可。
+    
+    # ===== TODO: KV Cache - Full Attention 缓存更新 (END) =====
 
     attn_output, attn_weights = eager_attention_forward(
         attn_module,

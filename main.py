@@ -54,6 +54,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable thinking/reasoning mode. Default is off (no thinking).",
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=False,
+        help="Disable KV Cache (Phase 1 baseline mode, much slower).",
+    )
     return parser
 
 
@@ -90,11 +96,14 @@ def main() -> None:
         enable_thinking=args.enable_thinking,
     )
 
+    use_cache = not getattr(args, "no_cache", False)
+
     if args.stream:
         for piece in engine.generate_stream(
             prompt=prompt,
             messages=messages,
             gen_config=gen_config,
+            use_cache=use_cache,
         ):
             print(piece, end="", flush=True)
         print()
@@ -105,13 +114,17 @@ def main() -> None:
         messages=messages,
         gen_config=gen_config,
         benchmark=args.benchmark,
+        use_cache=use_cache,
     )
     print(result["text"])
     if result.get("tool_calls"):
         print(result["tool_calls"])
     if result.get("metrics"):
         metrics = result["metrics"]
-        print(f"elapsed_s={metrics['elapsed_s']:.3f} tokens_per_s={metrics['tokens_per_s']:.2f}")
+        print(f"\n--- Performance ---")
+        print(f"Total   : {metrics['elapsed_s']:.3f}s  ({metrics['tokens_per_s']:.2f} tokens/s)")
+        print(f"Prefill : {metrics.get('prefill_s', 0):.3f}s  ({metrics.get('prefill_tokens_per_s', 0):.2f} tokens/s)")
+        print(f"Decode  : {metrics.get('decode_s', 0):.3f}s  ({metrics.get('decode_tokens_per_s', 0):.2f} tokens/s)")
 
 if __name__ == "__main__":
     main()

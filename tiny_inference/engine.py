@@ -66,16 +66,18 @@ class TinyQwenEngine:
         gen_config: Optional[GenerationConfig] = None,
         tools: Optional[list[dict[str, Any]]] = None,
         benchmark: bool = False,
+        use_cache: bool = True,
     ) -> dict[str, Any]:
         gen_config = gen_config or GenerationConfig()
         input_ids, attention_mask = self._prepare_inputs(prompt, messages, gen_config.enable_thinking)
 
         start = time.time()
-        generated_ids, full_ids = decode_tokens(
+        generated_ids, full_ids, timing = decode_tokens(
             model=self.model,
             input_ids=input_ids,
             attention_mask=attention_mask,
             gen_config=gen_config,
+            use_cache=use_cache,
         )
         end = time.time()
 
@@ -100,9 +102,17 @@ class TinyQwenEngine:
 
         if benchmark:
             elapsed = max(end - start, 1e-6)
+            prefill_s = timing["prefill_s"]
+            decode_s = timing["decode_s"]
+            decode_tok = timing["decode_tokens"]
+            prompt_tok = timing["prompt_tokens"]
             result["metrics"] = {
                 "elapsed_s": elapsed,
                 "tokens_per_s": len(generated_ids) / elapsed,
+                "prefill_s": prefill_s,
+                "prefill_tokens_per_s": prompt_tok / max(prefill_s, 1e-6),
+                "decode_s": decode_s,
+                "decode_tokens_per_s": decode_tok / max(decode_s, 1e-6),
             }
         return result
 
@@ -112,13 +122,15 @@ class TinyQwenEngine:
         messages: Optional[list[dict[str, Any]]] = None,
         gen_config: Optional[GenerationConfig] = None,
         tools: Optional[list[dict[str, Any]]] = None,
+        use_cache: bool = True,
     ) -> Iterable[str]:
         gen_config = gen_config or GenerationConfig()
-        input_ids, attention_mask = self._prepare_inputs(prompt, messages, gen_config.enable_thinking)        
+        input_ids, attention_mask = self._prepare_inputs(prompt, messages, gen_config.enable_thinking)
         yield from decode_stream(
             model=self.model,
             tokenizer=self.tokenizer,
             input_ids=input_ids,
             attention_mask=attention_mask,
             gen_config=gen_config,
+            use_cache=use_cache,
         )

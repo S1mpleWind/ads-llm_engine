@@ -11,12 +11,14 @@ def decode_tokens(
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
     gen_config: GenerationConfig,
-) -> tuple[list[int], torch.Tensor]:
+    use_cache: bool = True,
+) -> tuple[list[int], torch.Tensor, dict[str, float]]:
     return decode_tokens_manual(
         model=model,
         input_ids=input_ids,
         attention_mask=attention_mask,
         gen_config=gen_config,
+        use_cache=use_cache,
     )
 
 
@@ -26,6 +28,7 @@ def decode_stream(
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
     gen_config: GenerationConfig,
+    use_cache: bool = True,
 ):
     yield from decode_stream_manual(
         model=model,
@@ -33,4 +36,5 @@ def decode_stream(
         input_ids=input_ids,
         attention_mask=attention_mask,
         gen_config=gen_config,
+        use_cache=use_cache,
     )
