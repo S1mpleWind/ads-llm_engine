@@ -13,7 +13,7 @@
   - [Task 5：Prefill + Decode 解码循环](#task-5prefill--decode-解码循环-tiny_inferencemanual_decodingpy)
 - [如何定位需要写的代码](#如何定位需要写的代码)
 - [如何运行与验证](#如何运行与验证)
-- [评分标准](#评分标准)
+- [提交要求](#提交要求)
 
 ---
 
@@ -152,7 +152,7 @@ python test_phase2.py --stage speed
 
 ---
 
-## 结果留存
+## 提交要求
 
 完成实现后，运行以下命令获取最终结果：
 
@@ -160,12 +160,7 @@ python test_phase2.py --stage speed
 python test_phase2.py
 ```
 
-**请将终端输出结果截图并保留。** 截图需同时包含正确性测试和速度对比两部分，要求：
-
-- 正确性测试：所有用例显示 `[PASS]`
-- 速度对比：`with cache` 的 Decode 速度显著快于 `no cache`，一般情况下**至少 2 倍**
-
-示例输出（仅供参考，具体数值因机器而异）：
+正确性应全部 `[PASS]`；**Speed Comparison** 里 `with cache` 的 Decode 应明显快于 `no cache`。终端输出示例（数值因机器而异）：
 
 ```
 ============================================================
@@ -193,3 +188,17 @@ python test_phase2.py
   [OK] KV Cache decode is at least as fast as baseline.
 ============================================================
 ```
+
+测试通过后：
+
+1. **截图**：截屏保存 test_phase2.py 的运行结果（正确性测试通过且能看出 decode 较明显提速即可）。
+2. **准备代码**：在项目根目录执行下述指令，会生成 **`<学号>_project_phase2/`**。
+```
+./submit.sh <学号>
+```
+3. **放入截图**：把截图放进同一文件夹。
+4. **打包上传**：将该文件夹压缩为 **`<学号>_project_phase2.zip`**，按课程要求提交。
+
+压缩包解压后应看到：5 个 `.py` + 截图，都在 `<学号>_project_phase2/` 根目录下。
+
+---

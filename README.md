@@ -122,8 +122,8 @@ Qwen3.5 系列对文本、图像、视频一体化设计。本仓库中 **0.8B**
 | Task 3：Linear Attention 缓存 | 实现单步卷积更新与递推，`qwen3_5_linear_attn_forward()` 分支 |
 | Task 4：Forward 传递缓存 | `qwen3_5_text_forward()` 中创建、传递、返回缓存 |
 | Task 5：Decode 循环改造 | Prefill 一次 + Decode 逐 token，记录性能统计 |
-| 定位 TODO / 运行验证 | `grep` 命令定位所有填空位置，运行后观察速度提升 |
-| 结果留存 | 截图保留 KV Cache 实现效果 |
+| 定位 TODO / 运行验证 | `grep` 命令定位所有填空位置，运行 `test_phase2.py` 观察速度提升 |
+| 提交要求 | `test_phase2.py` 通过；最终提交内容： `<学号>_project_phase2.zip`，内含实现代码和测试结果截图，详见[phase2.md](phase2.md)  |
 
 ---
 
