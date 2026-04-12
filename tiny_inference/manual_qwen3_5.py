@@ -29,6 +29,13 @@ def qwen3_5_text_forward(
     # 使用torch.arange生成，形状为(seq_len,)的1D张量
     past_seen_tokens = 0 # 已缓存序列长度，目前默认为0，实现后被覆盖
 
+    # prefill,初始化cache,已有序列就是0
+    if (use_cache and past_key_values is None):
+        past_key_values = Qwen3_5DynamicCache (text_model.config)
+    
+    if past_key_values is not None:
+        past_seen_tokens = past_key_values.get_seq_length()
+
     cache_position = torch.arange( # 如果past_seen_tokens为0，则始终全量重算
         past_seen_tokens,
         past_seen_tokens + inputs_embeds.shape[1],
