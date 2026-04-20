@@ -14,12 +14,13 @@
 
 ## 项目总体情况
 
-项目分为两个阶段，每个阶段都有独立的说明文档：
+项目分为三个阶段，每个阶段都有独立的说明文档：
 
 | 阶段 | 内容 | 文档 |
 |------|------|------|
 | **Phase 1** | 配置环境、拉取权重，跑通统一基线推理命令 | 本文档 |
 | **Phase 2** | 在已有推理框架中补全 KV Cache 逻辑，观察 decode 速度提升 | [phase2.md](phase2.md) |
+| **Phase 3** | 在 KV Cache 基础上实现 Prefix Cache，跨请求复用 prefill 结果 | [phase3.md](phase3.md) |
 
 
 ---
@@ -124,6 +125,25 @@ Qwen3.5 系列对文本、图像、视频一体化设计。本仓库中 **0.8B**
 | Task 5：Decode 循环改造 | Prefill 一次 + Decode 逐 token，记录性能统计 |
 | 定位 TODO / 运行验证 | `grep` 命令定位所有填空位置，运行 `test_phase2.py` 观察速度提升 |
 | 提交要求 | `test_phase2.py` 通过；最终提交内容： `<学号>_project_phase2.zip`，内含实现代码和测试结果截图，详见[phase2.md](phase2.md)  |
+
+---
+
+### 🔁 [phase3.md](phase3.md) — Phase 3 实现任务
+
+**阅读时机**：完成 phase2 并确认 `test_phase2.py` 正确性与速度均通过之后。
+
+涵盖内容：
+
+| 章节 | 内容摘要 |
+|------|---------|
+| 任务总览 | Phase 2 单次请求内复用 vs Phase 3 跨请求复用；Prefix Cache 的动机与场景 |
+| Task 1：缓存深拷贝 | `Qwen3_5DynamicCache.clone()`，为快照提供独立副本 |
+| Task 2：前缀查询 | `PrefixCache.lookup()`，最长前缀匹配 + clone 返回 |
+| Task 3：前缀插入 | `PrefixCache.insert()`，prefill 结束后把快照存下 |
+| Task 4：Prefill 前查询 | 在 `decode_tokens_manual` 里对接 lookup，实现 partial prefill |
+| Task 5：Prefill 后写入 | 在同一文件里把 prefill 结束时的缓存交给 `insert` |
+| 定位 TODO / 运行验证 | `grep "TODO: Prefix Cache"`，运行 `test_phase3.py` 观察第二次请求 prefill 加速 |
+| 提交要求 | `test_phase3.py` 通过；提交 `<学号>_project_phase3.zip`，详见 [phase3.md](phase3.md) |
 
 ---
 

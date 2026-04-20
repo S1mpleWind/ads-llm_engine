@@ -4,6 +4,7 @@ import torch
 
 from .config import GenerationConfig
 from .manual_decoding import decode_stream_manual, decode_tokens_manual
+from .prefix_cache import PrefixCache
 
 
 def decode_tokens(
@@ -12,6 +13,7 @@ def decode_tokens(
     attention_mask: torch.Tensor,
     gen_config: GenerationConfig,
     use_cache: bool = True,
+    prefix_cache: PrefixCache | None = None,
 ) -> tuple[list[int], torch.Tensor, dict[str, float]]:
     return decode_tokens_manual(
         model=model,
@@ -19,6 +21,7 @@ def decode_tokens(
         attention_mask=attention_mask,
         gen_config=gen_config,
         use_cache=use_cache,
+        prefix_cache=prefix_cache,
     )
 
 
@@ -29,6 +32,7 @@ def decode_stream(
     attention_mask: torch.Tensor,
     gen_config: GenerationConfig,
     use_cache: bool = True,
+    prefix_cache: PrefixCache | None = None,
 ):
     yield from decode_stream_manual(
         model=model,
@@ -37,4 +41,5 @@ def decode_stream(
         attention_mask=attention_mask,
         gen_config=gen_config,
         use_cache=use_cache,
+        prefix_cache=prefix_cache,
     )

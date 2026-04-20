@@ -126,6 +126,37 @@ class Qwen3_5DynamicCache:
         kv_length = query_length + past_seen_tokens
         return kv_length, kv_offset
 
+    # ---------- Phase 3：Prefix Cache所需的深拷贝 ----------
+
+    def clone(self) -> "Qwen3_5DynamicCache":
+        """
+        Phase 3 Prefix Cache 专用：对当前缓存进行**深拷贝**，返回一个与原缓存完全独立的副本。
+
+        为什么需要深拷贝
+        ----------------
+        Prefix Cache把 prefill 结束时的缓存作为「可复用的快照」保存下来，供后续共享相同
+        前缀的请求复用。但后续请求在复用时会继续向缓存里 append 新的 K/V、原地更新
+        conv_state/recurrent_state —— 如果直接引用原对象，这些写入会**污染**快照，
+        导致下一次复用时拿到的不再是"prefill 刚结束时"的状态，而是夹杂着上一个请求
+        若干步 decode 的状态。
+
+        因此 PrefixCache.insert 必须先 clone 再存，PrefixCache.lookup 也必须 clone
+        后再交给 decoding 使用（这样同一快照可以被多次复用）。
+
+        实现提示
+        --------
+        1. 创建一个新的 Qwen3_5DynamicCache 实例（可利用 __new__ 避免重新走 __init__
+           所需的 config；将 layer_types / transformer_layers / last_linear_layer 拷过去即可）。
+        2. 对四个 list（key_cache / value_cache / conv_states / recurrent_states）
+           逐项处理：若元素为 None 则仍为 None；若为 Tensor 则使用 `.clone()` 得到独立副本。
+        3. 返回新实例。
+        """
+        # ===== TODO: Prefix Cache - (START) =====
+        raise NotImplementedError(
+            "请根据提示实现 clone()"
+        )
+        # ===== TODO: Prefix Cache - (END) =====
+
     @property
     def has_previous_state(self) -> bool:
         """

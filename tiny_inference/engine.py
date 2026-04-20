@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, Qwen3_5ForCausalLM
 
 from .config import GenerationConfig
 from .decoding import decode_stream, decode_tokens
+from .prefix_cache import PrefixCache
 from .tools import parse_tool_calls
 
 
@@ -22,7 +23,12 @@ def parse_messages(messages_json: str) -> list[dict[str, Any]]:
 
 
 class TinyQwenEngine:
-    def __init__(self, model_name_or_path: str):
+    def __init__(
+        self,
+        model_name_or_path: str,
+        enable_prefix_cache: bool = False,
+        prefix_cache_entries: int = 32,
+    ):
         self.device = torch.device("cpu")
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
@@ -34,6 +40,11 @@ class TinyQwenEngine:
         ).to(self.device)
         self.model.config._attn_implementation = "eager"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+
+        # Phase 3：Prefix Cache（跨请求复用 prefill 结果）。默认关闭，保持 phase2 行为兼容。
+        self.prefix_cache: PrefixCache | None = (
+            PrefixCache(max_entries=prefix_cache_entries) if enable_prefix_cache else None
+        )
 
     def _prepare_inputs(
         self,
@@ -78,6 +89,7 @@ class TinyQwenEngine:
             attention_mask=attention_mask,
             gen_config=gen_config,
             use_cache=use_cache,
+            prefix_cache=self.prefix_cache,
         )
         end = time.time()
 
@@ -113,6 +125,7 @@ class TinyQwenEngine:
                 "prefill_tokens_per_s": prompt_tok / max(prefill_s, 1e-6),
                 "decode_s": decode_s,
                 "decode_tokens_per_s": decode_tok / max(decode_s, 1e-6),
+                "prefix_hit_tokens": timing.get("prefix_hit_tokens", 0),
             }
         return result
 
@@ -133,4 +146,5 @@ class TinyQwenEngine:
             attention_mask=attention_mask,
             gen_config=gen_config,
             use_cache=use_cache,
+            prefix_cache=self.prefix_cache,
         )
