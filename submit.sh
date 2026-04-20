@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在项目根目录创建 <学号>_project_phase3/ 并复制 4 个 .py。截图与 zip 见 phase3.md「提交要求」。
+# 在项目根目录创建 <学号>_project_phase4/ 并复制 3 个 .py。截图与 zip 见 phase4.md「提交要求」。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -15,17 +15,16 @@ if [[ -z "$STUDENT_ID" || "$STUDENT_ID" == -* ]]; then
 fi
 
 if ! [[ "$STUDENT_ID" =~ ^[0-9]+$ ]]; then
-  echo "错误: 学号应为数字，例如 5213（对应目录名 ${STUDENT_ID}_project_phase3）。" >&2
+  echo "错误: 学号应为数字，例如 5213（对应目录名 ${STUDENT_ID}_project_phase4）。" >&2
   exit 1
 fi
 
-NAME="${STUDENT_ID}_project_phase3"
+NAME="${STUDENT_ID}_project_phase4"
 OUT="$ROOT/$NAME"
 
 FILES=(
   "tiny_inference/cache.py"
   "tiny_inference/prefix_cache.py"
-  "tiny_inference/manual_decoding.py"
   "tiny_inference/engine.py"
 )
 
@@ -43,4 +42,4 @@ for f in "${FILES[@]}"; do
 done
 
 echo "已创建: $OUT"
-echo "请将 test_phase3.py 的运行结果截图放入该文件夹，并压缩为 zip 后上传到 canvas"
+echo "请将 test_phase4.py 的运行结果截图放入该文件夹，并压缩为 zip 后上传到 canvas"

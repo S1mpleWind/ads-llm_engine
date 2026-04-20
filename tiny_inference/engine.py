@@ -9,7 +9,7 @@ from transformers import AutoTokenizer, Qwen3_5ForCausalLM
 
 from .config import GenerationConfig
 from .decoding import decode_stream, decode_tokens
-from .prefix_cache import PrefixCache
+from .prefix_cache import PrefixCache, TieredPrefixCache
 from .tools import parse_tool_calls
 
 
@@ -28,6 +28,13 @@ class TinyQwenEngine:
         model_name_or_path: str,
         enable_prefix_cache: bool = False,
         prefix_cache_entries: int = 32,
+        # ── Phase 4：SSD Offloading ──────────────────────────────────────────
+        # 传入一个目录路径即启用两级 Prefix Cache（内存 + SSD）；None 则维持
+        # Phase 3 行为（纯内存 PrefixCache）。`prefix_cache_mem_entries` 控制
+        # 两级缓存内存层的容量——故意设得比 `prefix_cache_entries` 小，用来
+        # 演示 offload 到 SSD 的效果。
+        prefix_cache_ssd_dir: str | None = None,
+        prefix_cache_mem_entries: int = 4,
     ):
         self.device = torch.device("cpu")
         if torch.cuda.is_available():
@@ -41,10 +48,21 @@ class TinyQwenEngine:
         self.model.config._attn_implementation = "eager"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
-        # Phase 3：Prefix Cache（跨请求复用 prefill 结果）。默认关闭，保持 phase2 行为兼容。
-        self.prefix_cache: PrefixCache | None = (
-            PrefixCache(max_entries=prefix_cache_entries) if enable_prefix_cache else None
-        )
+        # Phase 3 / 4：Prefix Cache
+        #   - enable_prefix_cache=False：完全关闭（phase2 行为）
+        #   - enable_prefix_cache=True 且 prefix_cache_ssd_dir=None：纯内存 PrefixCache（phase3）
+        #   - enable_prefix_cache=True 且 prefix_cache_ssd_dir 给定：两级 TieredPrefixCache（phase4）
+        self.prefix_cache: PrefixCache | TieredPrefixCache | None
+        if not enable_prefix_cache:
+            self.prefix_cache = None
+        elif prefix_cache_ssd_dir is None:
+            self.prefix_cache = PrefixCache(max_entries=prefix_cache_entries)
+        else:
+            self.prefix_cache = TieredPrefixCache(
+                ssd_cache_dir=prefix_cache_ssd_dir,
+                device=self.device,
+                max_mem_entries=prefix_cache_mem_entries,
+            )
 
     def _prepare_inputs(
         self,
