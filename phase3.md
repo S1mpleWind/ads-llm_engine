@@ -1,10 +1,10 @@
-# Phase 3：跨请求复用之 Prefix Cache
+# Phase 3：用 Prefix Cache 实现跨请求复用
 
 > **前置要求**：请先完成 [phase2.md](phase2.md)，并确保 `python test_phase2.py` 全部通过，且 decode 速度相较 no-cache 有明显提升。Phase 3 将在 Phase 2 已实现的 KV Cache 基础上继续扩展，**不会重复实现 Phase 2 的 TODO**——请先将你的 Phase 2 实现合并到本分支后再开始。
 
 ## 目录
 
-- [Phase 3：跨请求复用之 Prefix Cache](#phase-3跨请求复用之-prefix-cache)
+- [Phase 3：用 Prefix Cache 实现跨请求复用](#phase-3用-prefix-cache-实现跨请求复用)
   - [目录](#目录)
   - [如何将你的 Phase 2 实现合并到 Phase 3 分支](#如何将你的-phase-2-实现合并到-phase-3-分支)
   - [任务总览](#任务总览)
