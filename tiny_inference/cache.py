@@ -94,7 +94,7 @@ class Qwen3_5DynamicCache:
             self.value_cache[layer_idx] = value_states
         
         # 2. append
-        elif (self.key_cache[layer_idx] != None and seld.value_cache[layer_idx] != None):
+        elif (self.key_cache[layer_idx] != None and self.value_cache[layer_idx] != None):
             self.key_cache[layer_idx] = torch.cat(
                 [self.key_cache[layer_idx], key_states], dim=2
             )

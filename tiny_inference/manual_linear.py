@@ -342,7 +342,8 @@ def qwen3_5_linear_attn_forward(
     if (cache_params is not None):
         cache_params.recurrent_states[layer_idx] = last_recurrent_state
     else:
-        print("err: cache not init when updating last_recurrnt_state")
+        #print("err: cache not init when updating last_recurrnt_state")
+        pass # 可能不用cache
     # ===== TODO: KV Cache - Linear Attention 保存递推状态到缓存 (END) =====
 
     # 门控归一化：用 z 对输出做通道归一化，增强表达能力
