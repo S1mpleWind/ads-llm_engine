@@ -92,8 +92,15 @@ def decode_tokens_manual(
             # 调用 qwen3_5_text_forward，只传入本步新生成的 1 个 token（而非完整序列），
             # 同时传入 past_key_values（已有缓存）和 use_cache=True。
             # 函数返回新的 logits 和更新后的 past_key_values，供下一步继续使用。
-            raise NotImplementedError("KV Cache decode 尚未实现，请完成此 TODO 块")
-            
+            # raise NotImplementedError("KV Cache decode 尚未实现，请完成此 TODO 块")
+            logits, past_key_values = qwen3_5_text_forward(
+                model=model,
+                input_ids=next_token,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                use_cache=True,
+            )
+                        
             # ===== TODO: KV Cache - Decode 单步（用缓存替代全序列重计算）(END) =====
         else:
             full_ids = torch.cat(
@@ -193,8 +200,14 @@ def decode_stream_manual(
         if use_cache:
             # ===== TODO: KV Cache - Streaming Decode 单步（用缓存替代全序列重计算）(START) =====
             # 启用缓存时：只输入刚生成的 1 个 token，携带已有缓存，forward 内部追加并返回更新后的缓存
-            raise NotImplementedError("KV Cache decode 尚未实现，请完成此 TODO 块")
-            
+            # raise NotImplementedError("KV Cache decode 尚未实现，请完成此 TODO 块")
+            logits,past_key_values = qwen3_5_text_forward(
+                model = model,
+                input_ids = next_token,
+                attention_mask = attention_mask,
+                past_key_values = past_key_values,
+                use_cache = True
+            )
             # ===== TODO: KV Cache - Streaming Decode 单步（用缓存替代全序列重计算）(END) =====
         else:
             full_ids = torch.cat(

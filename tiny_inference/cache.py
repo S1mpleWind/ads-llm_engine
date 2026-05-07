@@ -87,9 +87,28 @@ class Qwen3_5DynamicCache:
         3. 返回拼接后的完整 K、V 供注意力计算使用。
         """
         # ===== TODO: KV Cache - Full Attention 缓存更新 (START) =====
-        raise NotImplementedError(
-            "请根据提示实现"
-        )
+        "请根据提示实现"
+        # 1. not init
+        if (self.key_cache[layer_idx] == None and self.value_cache[layer_idx] == None):
+            self.key_cache[layer_idx] = key_states
+            self.value_cache[layer_idx] = value_states
+        
+        # 2. append
+        elif (self.key_cache[layer_idx] != None and self.value_cache[layer_idx] != None):
+            self.key_cache[layer_idx] = torch.cat(
+                [self.key_cache[layer_idx], key_states], dim=2
+            )
+
+            self.value_cache[layer_idx] = torch.cat(
+                [self.value_cache[layer_idx], value_states], dim=2
+            )
+
+        else :
+            print("error: kv cache not initialized properly")
+
+        return[self.key_cache[layer_idx],self.value_cache[layer_idx]]
+
+
         # ===== TODO: KV Cache - Full Attention 缓存更新 (END) =====
 
     # ---------- 辅助方法 ----------
@@ -110,9 +129,18 @@ class Qwen3_5DynamicCache:
         3. 否则返回已缓存的序列长度。     
         """
         # ===== TODO: KV Cache - 返回已缓存序列长度 (START) =====
-        raise NotImplementedError(
-            "请根据提示实现"
-        )
+
+        # 1. 如果不是 full attention
+        if layer_idx not in self.transformer_layers:
+            layer_idx = self.transformer_layers[0]
+        
+        # 2. 检查该层缓存是否初始化
+        if self.key_cache[layer_idx] is None:
+            return 0
+        
+        # 3. seq_len dim=2
+        return self.key_cache[layer_idx].shape[2]
+
         # ===== TODO: KV Cache - 返回已缓存序列长度 (END) =====
 
     def get_mask_sizes(self, cache_position: torch.Tensor, layer_idx: int) -> tuple[int, int]:
