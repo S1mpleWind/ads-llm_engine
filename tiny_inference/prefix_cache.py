@@ -96,9 +96,40 @@ class PrefixCache:
              - 返回 (matched_len, self._entries[best_key].clone())。
         """
         # ===== TODO: Prefix Cache - (START) =====
-        raise NotImplementedError(
-            "请根据提示实现 lookup()"
-        )
+        # 1. 转换输入为 tuple 方便比较
+        query_tokens = tuple(token_ids)
+        best_key = None
+        best_len = 0
+
+        # 遍历所有已缓存的条目
+        for cached_tokens, _ in self._entries.items():
+            cached_len = len(cached_tokens)
+            # *只有当缓存长度小于等于当前请求长度时，才可能是前缀
+            if cached_len <= len(query_tokens):
+                # 检查是否匹配前缀
+                if cached_tokens == query_tokens[:cached_len]:
+                    if cached_len > best_len:
+                        best_len = cached_len
+                        best_key = cached_tokens
+
+        # 2. 未命中处理
+        if best_key is None:
+            self.misses += 1
+            return (0, None)
+        
+        # 3. 命中处理
+        # 约束：如果是完全匹配，必须留出至少一个 token 进行 forward
+        if best_len == len(query_tokens):
+            best_len -= 1
+        
+        # 维护 LRU：移动到队尾
+        self._entries.move_to_end(best_key)
+        self.hits += 1 
+        self.hit_tokens += best_len  # 注意是 hit_tokens
+
+        # 返回匹配长度和快照的克隆
+        return (best_len, self._entries[best_key].clone())
+            
         # ===== TODO: Prefix Cache - (END) =====
 
     # ---------- 插入 ----------
@@ -127,9 +158,19 @@ class PrefixCache:
         4. self._entries[key] = cache.clone()（新插入的条目天然位于队尾 = 最近使用）。
         """
         # ===== TODO: Prefix Cache - (START) =====
-        raise NotImplementedError(
-            "请根据提示实现 insert()"
-        )
+        # 1.
+        query_tokens = tuple(token_ids)
+        if query_tokens in self._entries:
+            self._entries.move_to_end(query_tokens)
+            return
+        
+        # 2.
+        if (len(self._entries)>=self._max_entries):
+            self._entries.popitem(last=False)
+            self.evictions += 1
+
+        self._entries[query_tokens] = cache.clone() #*天然处于队尾
+
         # ===== TODO: Prefix Cache - (END) =====
 
     # ---------- 辅助 ----------
