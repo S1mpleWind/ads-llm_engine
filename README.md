@@ -14,13 +14,15 @@
 
 ## 项目总体情况
 
-项目分为三个阶段，每个阶段都有独立的说明文档：
+项目分为五个阶段，每个阶段都有独立的说明文档：
 
 | 阶段 | 内容 | 文档 |
 |------|------|------|
 | **Phase 1** | 配置环境、拉取权重，跑通统一基线推理命令 | 本文档 |
 | **Phase 2** | 在已有推理框架中补全 KV Cache 逻辑，观察 decode 速度提升 | [phase2.md](phase2.md) |
 | **Phase 3** | 在 KV Cache 基础上实现 Prefix Cache，跨请求复用 prefill 结果 | [phase3.md](phase3.md) |
+| **Phase 4** | 把 Prefix Cache 向 SSD offload，做两级（内存 + SSD）缓存与跨进程持久化 | [phase4.md](phase4.md) |
+| **Phase 5** | 切到 client 端：用现成引擎搭多轮对话 chatbox，实现 context 管理（摘要压缩 / 前缀友好 / 会话持久化） | [phase5.md](phase5.md) |
 
 
 ---
@@ -144,6 +146,40 @@ Qwen3.5 系列对文本、图像、视频一体化设计。本仓库中 **0.8B**
 | Task 5：Prefill 后写入 | 在同一文件里把 prefill 结束时的缓存交给 `insert` |
 | 定位 TODO / 运行验证 | `grep "TODO: Prefix Cache"`，运行 `test_phase3.py` 观察第二次请求 prefill 加速 |
 | 提交要求 | `test_phase3.py` 通过；提交 `<学号>_project_phase3.zip`，详见 [phase3.md](phase3.md) |
+
+---
+
+### 💾 [phase4.md](phase4.md) — Phase 4 实现任务
+
+**阅读时机**：完成 phase3 并确认 `test_phase3.py` 通过之后。
+
+涵盖内容：
+
+| 章节 | 内容摘要 |
+|------|---------|
+| 任务总览 | 纯内存 Prefix Cache 的容量瓶颈；两级（内存 + SSD）缓存与跨进程持久化的动机 |
+| Task 1/2：Cache 序列化 | `to_cpu_state_dict` / `from_cpu_state_dict`，落盘前 `.cpu()`、加载后 `.to(device)` |
+| Task 3：SSD 存储层 | `DiskStore` 的 save / load / 扫盘重建索引 |
+| Task 4/5：两级缓存 | `TieredPrefixCache.lookup` / `insert`，LRU 溢出下沉到 SSD |
+| 定位 TODO / 运行验证 | `grep "TODO: SSD Offload"`，运行 `test_phase4.py` 观察驱逐、持久化、速度对比 |
+| 提交要求 | `test_phase4.py` 通过；提交 `<学号>_project_phase4.zip`，详见 [phase4.md](phase4.md) |
+
+---
+
+### 💬 [phase5.md](phase5.md) — Phase 5 实现任务
+
+**阅读时机**：完成 phase4（或至少 phase3）之后。视角从引擎内部切换到 client 端。
+
+涵盖内容：
+
+| 章节 | 内容摘要 |
+|------|---------|
+| 任务总览 | 上下文窗口有限 vs 对话历史无限增长；client 端 context 管理与 server 端 Prefix Cache 的协同 |
+| Task 1：摘要压缩 | `ContextManager.compress()`，把最旧的若干轮喂给模型折叠成滚动摘要 |
+| Task 2：前缀友好拼装 | `ContextManager.build_messages()`，稳定前缀以最大化 Prefix Cache 命中 |
+| Task 3：会话持久化 | `ContextManager.save` / `load`，配合 `SessionStore` 支持多会话 |
+| 定位 TODO / 运行验证 | `grep "TODO: Context"`，运行 `test_phase5.py`；用 `python chat_app.py` 打开 Web chatbox 实测 |
+| 提交要求 | `test_phase5.py` 通过；提交 `<学号>_project_phase5.zip`，详见 [phase5.md](phase5.md) |
 
 ---
 

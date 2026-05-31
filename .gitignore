@@ -9,6 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
+# Phase 5: chatbox 持久化会话 & 提交目录
+sessions/
+*_project_phase*/
+
 # Timing logs and reports
 stat/timing*.log
 stat/timing_report*.png
