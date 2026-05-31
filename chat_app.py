@@ -5,9 +5,9 @@ Phase 5：Chatbox Web UI（零三方依赖，仅用标准库 http.server）
 多轮对话的 chatbox。这个文件**已全部实现**，不是作业的一部分——它的作用是让你
 直观看到自己写的 context 管理在真实对话里起了什么作用：
 
-  - 右侧面板实时显示：当前 prompt 的 token 数 / 预算、已压缩次数、滚动摘要正文、
+  - 右侧面板实时显示：当前 prompt 的 token 数 / budget、已压缩次数、滚动摘要正文、
     （若开启 Prefix Cache）本轮命中省下的 token 数；
-  - 当历史超预算触发摘要压缩时，对应消息会标注「已压缩」；
+  - 当历史超 budget 触发摘要压缩时，对应消息会标注「已压缩」；
   - 左侧可以新建 / 切换会话，所有会话通过 SessionStore 持久化到磁盘，重启不丢。
 
 运行
@@ -216,7 +216,7 @@ INDEX_HTML = """<!DOCTYPE html>
     <h2>Context 状态</h2>
     <div class="stat"><span>Prompt tokens</span><span id="ptok">-</span></div>
     <div class="bar"><div id="pbar" style="width:0%"></div></div>
-    <div class="stat"><span>预算 / 窗口</span><span id="budget">-</span></div>
+    <div class="stat"><span>budget / 窗口</span><span id="budget">-</span></div>
     <div class="stat"><span>保留轮数</span><span id="turns">-</span></div>
     <div class="stat"><span>压缩次数</span><span id="comps">-</span></div>
     <div class="stat"><span>已折叠轮数</span><span id="folded">-</span></div>

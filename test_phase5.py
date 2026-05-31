@@ -117,11 +117,11 @@ def stage_compression() -> bool:
     ok &= cond
     print(f"  {PASS if cond else FAIL} 最近一轮原文被保留 (剩余 {len(cm.turns)} 轮)")
 
-    # 压缩后应回到预算之内（或已压到只剩 keep_recent_turns 轮的下限）
+    # 压缩后应回到 budget 之内（或已压到只剩 keep_recent_turns 轮的下限）
     final = cm.count_tokens(cm.build_messages())
     cond = final <= cm.token_budget() or len(cm.turns) <= cm.keep_recent_turns
     ok &= cond
-    print(f"  {PASS if cond else FAIL} 最终在预算内 (tokens={final} <= budget={cm.token_budget()})")
+    print(f"  {PASS if cond else FAIL} 最终在 budget 内 (tokens={final} <= budget={cm.token_budget()})")
 
     print(f"  Result: {'all passed' if ok else 'FAILED'}")
     return ok
@@ -133,7 +133,7 @@ def stage_compression() -> bool:
 def stage_prefix() -> bool:
     _header("Phase 5 – 前缀稳定性（与 Prefix Cache 协同）")
     tok = FakeTokenizer()
-    # 预算给足，前几轮不触发压缩 —— 这样能纯粹检验 build_messages 的拼装顺序。
+    # budget 给足，前几轮不触发压缩 —— 这样能纯粹检验 build_messages 的拼装顺序。
     cm = ContextManager(
         tok,
         system_prompt="你是一个有帮助的助手",
@@ -286,7 +286,7 @@ def stage_e2e() -> bool:
 
     cond = len(cm.turns) <= cm.keep_recent_turns or cm.count_tokens(cm.build_messages()) <= cm.token_budget()
     ok &= cond
-    print(f"  {PASS if cond else FAIL} 末轮仍在预算内")
+    print(f"  {PASS if cond else FAIL} 末轮仍在 budget 内")
 
     # 信息性：摘要是否保住了「最喜欢的颜色」这个早期事实（模型能力相关，不强制断言）
     last = cm.turns[-1].assistant.lower()

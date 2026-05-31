@@ -15,7 +15,7 @@ chatbox 时，会立刻撞上一个新问题：
   - 即便没超，prefill 也越来越慢、越来越贵（prefill 成本随 prompt 长度线性增长）。
 
 所以**在把 prompt 交给引擎之前**，client 必须先做一轮「上下文管理」，把历史压到
-预算之内。这就是 Phase 5 的主题。常见策略有三类：
+budget 之内。这就是 Phase 5 的主题。常见策略有三类：
 
   1. **截断 / 滑动窗口**：直接丢掉最早的轮次。简单，但早期信息彻底丢失。
   2. **摘要压缩（summarization）**：把最早的若干轮**喂给模型自己**，让它生成一段
@@ -30,7 +30,7 @@ prompt 前缀**，从而最大化 Prefix Cache 命中、把 prefill 成本压到
 模块结构
 --------
   - `ContextManager`：维护一段对话的 system 提示、滚动摘要 `summary`、以及尚未被
-    压缩的若干轮 `turns`；负责「按预算压缩」和「拼装发给引擎的 messages」。
+    压缩的若干轮 `turns`；负责「按 budget 压缩」和「拼装发给引擎的 messages」。
   - `SessionStore`：把多个会话以 JSON 落盘到一个目录，支持列出 / 读取 / 写入，
     让 chatbox 支持「多会话、可持久化、重启不丢」。
 
@@ -80,7 +80,7 @@ _SUMMARY_INSTRUCTION = (
 
 class ContextManager:
     """
-    维护**单个会话**的对话状态，并在每轮把历史压进 token 预算内。
+    维护**单个会话**的对话状态，并在每轮把历史压进 token budget 内。
 
     状态
     ----
@@ -88,7 +88,7 @@ class ContextManager:
       - `summary`：把「早期被压缩掉的轮次」滚动汇总成的一段文本；可能为 None（还没压过）。
       - `turns`：尚未被压缩的、保留原文的若干轮 `Turn`。
 
-    预算
+    budget
     ----
       - `max_context_tokens`：本次请求 prompt 允许的最大 token 数（对应模型上下文窗口
         里留给输入的部分）。
@@ -136,7 +136,7 @@ class ContextManager:
         self.turns[-1].assistant = text
 
     # ====================================================================
-    # token 计数与预算（已实现，供你在 TODO 里直接调用）
+    # token 计数与 budget（已实现，供你在 TODO 里直接调用）
     # ====================================================================
 
     def _summary_message(self) -> Optional[Message]:
@@ -212,18 +212,18 @@ class ContextManager:
         # ===== TODO: Context - build_messages (END) =====
 
     # ====================================================================
-    # Task 1：按预算做摘要压缩（TODO）
+    # Task 1：按 budget 做摘要压缩（TODO）
     # ====================================================================
 
     def maybe_compress(self, summarize_fn: Summarizer) -> bool:
         """
         （已实现）在把 prompt 发给引擎**之前**调用：只要当前 messages 超出
         `token_budget()`，且还有「可以被折叠的旧轮次」（总轮数 > keep_recent_turns），
-        就反复调用 `compress()` 把最旧的一批轮次压成摘要，直到回到预算之内。
+        就反复调用 `compress()` 把最旧的一批轮次压成摘要，直到回到 budget 之内。
 
         返回是否真的压缩过（chatbox 面板用它提示「已压缩历史」）。
 
-        注意：这里**故意**只在超预算时才压（而不是每轮都压），这样 summary 不会每轮
+        注意：这里**故意**只在超 budget 时才压（而不是每轮都压），这样 summary 不会每轮
         都变 —— 正是 build_messages() 文档里强调的「保持前缀稳定」。
         """
         compressed = False
