@@ -65,11 +65,24 @@ def _get_manager(session_id: str) -> ContextManager:
 
 def _summarize_fn(prompt: str) -> str:
     assert ENGINE is not None
-    out = ENGINE.generate(
-        messages=[{"role": "user", "content": prompt}],
-        gen_config=GenerationConfig(max_new_tokens=120, do_sample=False),
-    )
-    return out["text"]
+
+    try:
+        #print("1")
+        out = ENGINE.generate(
+            messages=[
+                {"role": "system", "content": "you are a helpful assistant"},
+                {"role": "user", "content": prompt}
+            ],
+            gen_config=GenerationConfig(max_new_tokens=120, do_sample=False),
+        )
+        #print(out["text"])
+        return out["text"]
+        
+    except Exception as e:
+        # 使用 Exception 可以捕获所有标准运行时错误，但不会拦截终止进程的信号
+        print(f"generate error: {e}")
+        # 返回空字符串或自定义的错误提示，确保调用方不会因为 out["text"] 未定义而崩溃
+        return ""
 
 
 def _handle_chat(payload: dict) -> dict:
@@ -79,14 +92,45 @@ def _handle_chat(payload: dict) -> dict:
     cm = _get_manager(session_id)
 
     cm.add_user(message)
+
+    # # ------------------ [新增调试打印：查看真实的 Tokens 消耗] ------------------
+    # current_tokens = cm.count_tokens(cm.build_messages())
+    # budget = cm.token_budget()
+    # print(f"\n[DEBUG] 会话 {session_id} | 当前未折叠轮次: {len(cm.turns)}")
+    # print(f"[DEBUG] 当前 Tokens 数量: {current_tokens} / 硬上限 Budget: {budget}")
+    # # -------------------------------------------------------------------------
+
     compressed = cm.maybe_compress(_summarize_fn)
+    # print("reached here")
+
+
+    #TODO 这里有问题
+
+    # ------------------ [新增调试打印：拦截压缩动作反馈] ----------------------
+    # if compressed:
+    #     print(f"[DEBUG] 触发了历史压缩！清理后 Tokens 剩余: {cm.count_tokens(cm.build_messages())}")
+    # else:
+    #     print("[DEBUG] 尚未达到触发门槛 (回合数>3 且 Tokens>768)，无需压缩。")
+    # # -------------------------------------------------------------------------
+
+    # print("reached there")
+
     messages = cm.build_messages()
-    result = ENGINE.generate(
-        messages=messages,
-        gen_config=GenerationConfig(max_new_tokens=CFG["max_new_tokens"], do_sample=False),
-        benchmark=True,
-    )
-    reply = result["text"]
+
+    try:
+        result = ENGINE.generate(
+            messages=messages,
+            gen_config=GenerationConfig(max_new_tokens=CFG["max_new_tokens"], do_sample=False),
+            benchmark=True,
+        )
+        reply = result["text"]
+
+    except Exception as e:
+        # 使用 Exception 可以捕获所有标准运行时错误，但不会拦截终止进程的信号
+        print(f"generate error: {e}")
+        # 返回空字符串或自定义的错误提示，确保调用方不会因为 out["text"] 未定义而崩溃
+        reply =""
+    
     cm.add_assistant(reply)
     STORE.save(session_id, cm)
 
@@ -153,17 +197,21 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             if self.path == "/api/chat":
+                print("api/chat")
                 self._send_json(_handle_chat(payload))
             elif self.path == "/api/new":
+                print("api/new")
                 sid = payload.get("session") or "default"
                 SESSIONS[sid] = _new_manager()
                 STORE.save(sid, SESSIONS[sid])
                 self._send_json({"ok": True, "session": sid})
             else:
+                print("not found")
                 self._send_json({"error": "not found"}, 404)
         except NotImplementedError as e:
             self._send_json({"error": f"尚未实现：{e}（请先完成 Phase 5 的 TODO）"}, 501)
         except Exception as e:  # noqa: BLE001 教学用，直接把错误回显到前端
+            print("前端错误")
             self._send_json({"error": f"{type(e).__name__}: {e}"}, 500)
 
 

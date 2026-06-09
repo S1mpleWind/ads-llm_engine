@@ -50,6 +50,19 @@ from typing import Any, Callable, Optional
 # 一条「发给引擎」的消息，形如 {"role": "system"|"user"|"assistant", "content": str}。
 Message = dict[str, Any]
 
+def _as_token_ids(out: Any) -> list[int]:
+    """把 apply_chat_template(tokenize=True) 的返回规整成扁平 token id 列表。
+
+    不同 transformers 版本 / tokenizer 下，`apply_chat_template` 可能返回一个
+    `BatchEncoding`（dict，含 "input_ids"）而非纯 list；若直接 len() 会数成键数（2），
+    导致 token 计数失真、压缩永不触发。这里统一取出 input_ids。
+    """
+    if hasattr(out, "input_ids"):
+        out = out.input_ids
+    elif isinstance(out, dict):
+        out = out["input_ids"]
+    return out
+
 # 摘要器：给定一段「待压缩的纯文本」，返回压缩后的摘要文本。
 # chatbox 里它会被接到真正的引擎上（让模型自己写摘要）；测试里可以传一个桩函数。
 Summarizer = Callable[[str], str]
@@ -139,12 +152,17 @@ class ContextManager:
     # token 计数与 budget（已实现，供你在 TODO 里直接调用）
     # ====================================================================
 
+
     def _summary_message(self) -> Optional[Message]:
-        """把当前 `summary` 包装成一条放在 system 之后的消息；没有摘要则返回 None。"""
+        """把当前 `summary` 包装成一条放在 system 之后的消息；没有摘要则返回 None。
+
+        注意 role 用 "user" 而非 "system"：Qwen3.5 的 chat template 只允许 system
+        消息出现一条。
+        """
         if not self.summary:
             return None
         return {
-            "role": "system",
+            "role": "user",
             "content": "以下是更早对话的摘要（供你延续上下文）：\n" + self.summary,
         }
 
@@ -154,10 +172,12 @@ class ContextManager:
         与引擎 `_prepare_inputs` 的口径保持一致（`add_generation_prompt=True`），
         因此这里数出来的就是引擎真正会 prefill 的输入长度。
         """
-        ids = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
+        ids = _as_token_ids(
+            self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=True,
+                add_generation_prompt=True,
+            )
         )
         return len(ids)
 
@@ -208,7 +228,17 @@ class ContextManager:
         4. 返回 messages。
         """
         # ===== TODO: Context - build_messages (START) =====
-        raise NotImplementedError("请根据提示实现 build_messages()")
+        messages =  [{"role": "system", "content": self.system_prompt}]
+
+        summary_message = self._summary_message()
+        if summary_message is not None:
+            messages.append(summary_message)
+
+        for turn in self.turns:
+            messages.extend(turn.to_messages()) #to_message 返回的已经是List了
+
+        # print(messages)
+        return messages
         # ===== TODO: Context - build_messages (END) =====
 
     # ====================================================================
@@ -234,6 +264,9 @@ class ContextManager:
         ):
             self.compress(summarize_fn)
             compressed = True
+            #(compressed)
+        
+        #print("reach here")
         return compressed
 
     def compress(self, summarize_fn: Summarizer) -> None:
@@ -266,7 +299,28 @@ class ContextManager:
         6. 维护统计：self.num_compressions += 1；self.turns_folded += n_fold。
         """
         # ===== TODO: Context - compress (START) =====
-        raise NotImplementedError("请根据提示实现 compress()")
+        n_fold = len(self.turns) - self.keep_recent_turns
+
+        if n_fold <= 0 : return
+
+        fold = self.turns[ :n_fold]
+        self.turns = self.turns[n_fold:]
+
+        material = ""
+
+        if (self.summary) is not None:
+            material += f"已有摘要：\n{self.summary}\n\n"
+
+        material += "需要并入摘要的对话：\n"
+        for turn in fold:
+            material += f"用户：{turn.user}\n助手：{turn.assistant}\n"
+
+        prompt = _SUMMARY_INSTRUCTION + material
+        self.summary = summarize_fn(prompt).strip()
+
+        self.num_compressions += 1
+        self.turns_folded += n_fold
+        
         # ===== TODO: Context - compress (END) =====
 
     # ====================================================================
@@ -300,7 +354,9 @@ class ContextManager:
                json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
         """
         # ===== TODO: Context - save (START) =====
-        raise NotImplementedError("请根据提示实现 save()")
+        os.makedirs(os.path.dirname(path) or "." , exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
         # ===== TODO: Context - save (END) =====
 
     @classmethod
@@ -322,7 +378,23 @@ class ContextManager:
         4. 返回 cm。
         """
         # ===== TODO: Context - load (START) =====
-        raise NotImplementedError("请根据提示实现 load()")
+        with open(path, "r", encoding="utf-8") as f: data = json.load(f)
+        cm = cls(
+            tokenizer=tokenizer,
+            system_prompt=data.get("system_prompt"),
+            max_context_tokens=data.get("max_context_tokens"),
+            reserve_for_reply=data.get("reserve_for_reply"),
+            keep_recent_turns=data.get("keep_recent_turns")
+)
+        
+        cm.summary = data.get("summary")
+        cm.turns = [Turn(user=t["user"], assistant=t.get("assistant", ""))
+                    for t in data.get("turns", [])]
+        cm.num_compressions = data.get("num_compressions", 0)
+        cm.turns_folded = data.get("turns_folded", 0)
+
+        return cm
+
         # ===== TODO: Context - load (END) =====
 
 
