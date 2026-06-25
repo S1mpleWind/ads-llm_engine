@@ -32,7 +32,8 @@ def qwen3_5_text_forward(
     # prefill,初始化cache,已有序列就是0
     if (use_cache and past_key_values is None):
         past_key_values = Qwen3_5DynamicCache (text_model.config)
-    
+
+    # decode/prefix reuse，已经有缓存，替换
     if past_key_values is not None:
         past_seen_tokens = past_key_values.get_seq_length()
 

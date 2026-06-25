@@ -111,11 +111,11 @@ def decode_tokens_manual(
                 model=model,
                 input_ids=next_token,
                 attention_mask=attention_mask,
-                past_key_values=past_key_values,
+                past_key_values=past_key_values, #使用cache
                 use_cache=True,
             )
-                        
             # ===== TODO: KV Cache - Decode 单步（用缓存替代全序列重计算）(END) =====
+
         else:
             full_ids = torch.cat(
                 [input_ids, torch.tensor([generated], device=input_ids.device)], dim=1

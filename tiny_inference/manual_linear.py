@@ -57,6 +57,12 @@ def torch_causal_conv1d_update(
     conv_state.copy_( (new_conv_state[:,:, -state_len:]).to(conv_state.dtype) )
 
     #3.
+    #  conv1d asks the kernel to be 
+    # (out_channels, in_channels_per_group, kernel_size)
+
+    #? group is used to control the input-channel-num 
+    #? that a output channel can use
+    
     conv_out = F.conv1d(
         new_conv_state,
         weight.unsqueeze(1),   # (hidden_size, 1, kernel_size)

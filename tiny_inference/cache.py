@@ -181,6 +181,8 @@ class Qwen3_5DynamicCache:
         """
         # ===== TODO: Prefix Cache - (START) =====
         # 1. init
+
+        # 构造的过程 = new + init(config)
         kv_cp = Qwen3_5DynamicCache.__new__(Qwen3_5DynamicCache)
 
         kv_cp.layer_types = self.layer_types

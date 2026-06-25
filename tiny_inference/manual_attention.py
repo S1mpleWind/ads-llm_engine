@@ -84,7 +84,8 @@ def qwen3_5_attention_forward(
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
     # ===== TODO: KV Cache - Full Attention 缓存更新 (START) =====
-    # 将本步产生的 K、V 追加到缓存，取回包含所有历史 token 的完整 K/V，
+    # 将本步产生的 K、V 追加到缓存，
+    # *取回包含所有历史 token 的完整 K/V，
     # 之后的 attention 计算基于这个完整序列（而非仅本步的 K/V）。
     if past_key_values is not None:
         key_states,value_states = past_key_values.update(key_states,value_states,layer_idx)

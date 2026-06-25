@@ -105,6 +105,8 @@ class PrefixCache:
         for cached_tokens, _ in self._entries.items():
             cached_len = len(cached_tokens)
             # *只有当缓存长度小于等于当前请求长度时，才可能是前缀
+            # 如果更长的话截取之后是不是也能用？
+
             if cached_len <= len(query_tokens):
                 # 检查是否匹配前缀
                 if cached_tokens == query_tokens[:cached_len]:
@@ -118,7 +120,8 @@ class PrefixCache:
             return (0, None)
         
         # 3. 命中处理
-        # 约束：如果是完全匹配，必须留出至少一个 token 进行 forward
+        # 约束：如果是完全匹配，必须留出至少一个 token，需要获取一个q来继续进行forward
+        # 这是工程上的要求，其实可以继续复用这个命中并计算logits，但是就得改forward函数的逻辑了
         if best_len == len(query_tokens):
             best_len -= 1
         
