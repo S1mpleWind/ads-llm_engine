@@ -58,6 +58,8 @@ def decode_tokens_manual(
 
         if matched_len > 0:
             # chunk
+
+            # "exchange" token_ids for cache
             prefill_input_ids = input_ids[:, matched_len:] 
             prefill_past_kv = loaded_cache
 
@@ -96,6 +98,7 @@ def decode_tokens_manual(
         [attention_mask, torch.ones_like(next_token)], dim=1
     )
 
+    #* start decoding
     decode_start = time.time()
     for step in range(1, gen_config.max_new_tokens):
         if token_id in eos_ids:

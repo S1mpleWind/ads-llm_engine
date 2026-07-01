@@ -235,7 +235,9 @@ class ContextManager:
             messages.append(summary_message)
 
         for turn in self.turns:
-            messages.extend(turn.to_messages()) #to_message 返回的已经是List了
+            messages.extend(turn.to_messages()) 
+            # to_message 返回的已经是List了；
+            # expend会将一个iterable里的每个元素都加到列表的末尾
 
         # print(messages)
         return messages
@@ -308,6 +310,7 @@ class ContextManager:
 
         material = ""
 
+        #? 将已有的摘要和新的要压缩的对话整理到一个文本里
         if (self.summary) is not None:
             material += f"已有摘要：\n{self.summary}\n\n"
 

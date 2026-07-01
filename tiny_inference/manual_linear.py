@@ -54,6 +54,7 @@ def torch_causal_conv1d_update(
     #1.
     new_conv_state = torch.cat([old_state,hs],dim = -1)
 
+    #? 原地更新，`.copy_`这个tensor的值会直接更新，不用于普通的值传递
     conv_state.copy_( (new_conv_state[:,:, -state_len:]).to(conv_state.dtype) )
 
     #3.
@@ -68,7 +69,7 @@ def torch_causal_conv1d_update(
         weight.unsqueeze(1),   # (hidden_size, 1, kernel_size)
         bias=bias,
         padding=0,
-        groups=new_conv_state.shape[1],
+        groups=new_conv_state.shape[1], #分成n组，每个输出通道只使用一个输入通道
     )[:, :, -seq_len:]
 
     #4.激活并恢复原始精度
@@ -296,12 +297,16 @@ def qwen3_5_linear_attn_forward(
         # 用 F.pad(mixed_qkv, (left, 0)) 将 mixed_qkv 保存为滑动窗口快照，存入缓存对应层的槽位
         # left = 卷积核的最后一维 - mixed_qkv 的最后一维（正值左侧补零、负值从左裁剪，结果始终是 kernel_size 帧）
         kernel_size = linear_attn_module.conv1d.weight.shape[-1]
+
+        #? 正值补0,负值截取，用于初始化一个conv_state
         left = kernel_size - mixed_qkv.shape[-1]
+        
         if cache_params is not None:
             cache_params.conv_states[layer_idx] = F.pad(mixed_qkv, (left, 0))
         else:
             pass
         # ===== TODO: KV Cache - Linear Attention 保存卷积状态到缓存 (END) =====
+
         mixed_qkv = F.silu(linear_attn_module.conv1d(mixed_qkv)[:, :, :seq_len])
         #? 这里前面会加0的pad，然后切片一下
 

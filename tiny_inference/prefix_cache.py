@@ -170,6 +170,7 @@ class PrefixCache:
         # 2.
         if (len(self._entries)>=self._max_entries):
             self._entries.popitem(last=False)
+            #? need to evict an item
             self.evictions += 1
 
         self._entries[query_tokens] = cache.clone() #*天然处于队尾
@@ -445,6 +446,7 @@ class TieredPrefixCache:
         device: torch.device,
         max_mem_entries: int = 4,
     ):
+        #* 2level cache: _mem + _disk
         self._mem: "OrderedDict[tuple[int, ...], Qwen3_5DynamicCache]" = OrderedDict()
         self._max_mem_entries = max_mem_entries
         self._disk = DiskStore(ssd_cache_dir, device)
@@ -525,10 +527,13 @@ class TieredPrefixCache:
 
         else:
             matched_len = best_ssd_len
+
             cache_to_clone = self._promote_to_mem(best_ssd_key)
+            # 相关需要的操作被封装在这个函数里了
+
             self.ssd_hits += 1
 
-        # 如果是完全匹配（matched_len == len(request)），按 PrefixCache 的约定
+        #? 如果是完全匹配（matched_len == len(request)），按 PrefixCache 的约定
         # 截断为 len - 1，避免 forward 收到空的 prefill_input_ids 导致下游报错。
         if matched_len == len(query_tokens):
             matched_len -= 1
@@ -574,6 +579,8 @@ class TieredPrefixCache:
             self._mem.move_to_end(key)
             return
         
+        #? 如果disk有，仍然是添加到 _mem里，所以只需要考虑mem里的约束就行
+
         # 3. 若 len(self._mem) >= self._max_mem_entries：popitem(last=False)，
         #    并 offload 到 SSD。
         if len(self._mem) >= self._max_mem_entries:
